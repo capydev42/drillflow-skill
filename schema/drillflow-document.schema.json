@@ -1,0 +1,468 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://drillflow.de/schema/drillflow-document.schema.json",
+  "title": "DrillFlow document",
+  "description": "A DrillFlow diagram document. Diagrams live in a flat map; hierarchy is expressed by node.childDiagramId / diagram.parentNodeId references, never by nesting the JSON. Prose reference: https://drillflow.de/en/format/",
+  "type": "object",
+  "required": [
+    "id",
+    "title",
+    "rootDiagramId",
+    "diagrams",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "title": {
+      "type": "string"
+    },
+    "rootDiagramId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Key into `diagrams`. Every document has exactly one root diagram."
+    },
+    "diagrams": {
+      "type": "object",
+      "description": "Map of diagram id to diagram. Must contain the key named by rootDiagramId.",
+      "minProperties": 1,
+      "maxProperties": 5000,
+      "additionalProperties": {
+        "$ref": "#/$defs/diagram"
+      }
+    },
+    "createdAt": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "updatedAt": {
+      "$ref": "#/$defs/timestamp"
+    }
+  },
+  "$defs": {
+    "timestamp": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Unix epoch MILLISECONDS (not seconds)."
+    },
+    "color": {
+      "type": "string",
+      "description": "Any CSS colour. `url(...)` is refused: a colour lands in a `background` shorthand, so it is a way to make a shared document fetch a remote resource and report the viewer's IP back.",
+      "not": {
+        "pattern": "url\\s*\\("
+      }
+    },
+    "typography": {
+      "type": "object",
+      "properties": {
+        "fontSize": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "px, default 14"
+        },
+        "fontFamily": {
+          "enum": [
+            "sketch",
+            "sans",
+            "serif",
+            "mono"
+          ],
+          "description": "default 'sketch'"
+        },
+        "bold": {
+          "type": "boolean"
+        },
+        "italic": {
+          "type": "boolean"
+        },
+        "align": {
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ],
+          "description": "default 'center'"
+        }
+      }
+    },
+    "point": {
+      "type": "object",
+      "required": [
+        "x",
+        "y"
+      ],
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        }
+      }
+    },
+    "inkPoint": {
+      "type": "object",
+      "required": [
+        "x",
+        "y"
+      ],
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "p": {
+          "type": "number",
+          "description": "Stylus pressure; present only when real pressure was reported."
+        }
+      }
+    },
+    "layer": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "visible"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string"
+        },
+        "visible": {
+          "type": "boolean"
+        }
+      }
+    },
+    "node": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "label"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/$defs/typography"
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "draw"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "points"
+            ],
+            "properties": {
+              "points": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "image"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "src"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "enum": [
+                  "text",
+                  "pin"
+                ]
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "not": {
+              "required": [
+                "childDiagramId"
+              ]
+            },
+            "description": "text and pin nodes cannot own a subflow."
+          }
+        }
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique within its own diagram (not globally)."
+        },
+        "type": {
+          "enum": [
+            "rect",
+            "circle",
+            "diamond",
+            "text",
+            "pin",
+            "draw",
+            "image"
+          ]
+        },
+        "label": {
+          "type": "string",
+          "description": "May be empty. \\n is a line break."
+        },
+        "x": {
+          "type": "number",
+          "description": "Top-left corner, flow units. Y grows downward. OPTIONAL: omit x and y on every node of a diagram and DrillFlow lays that diagram out itself, the same way it lays out an imported Mermaid flowchart. Within one diagram it is all or nothing \u2014 positioning only some nodes is refused by the loader, a rule JSON Schema cannot express."
+        },
+        "y": {
+          "type": "number",
+          "description": "See x. Omit both together, or give both on every node of the diagram."
+        },
+        "w": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Omitted = per-type default (rect 140x60, circle/diamond 100x100, text 140x40, pin 12x12, draw 40x40, image 200x150)."
+        },
+        "h": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "childDiagramId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Key into the document's `diagrams`. That diagram must carry `parentNodeId` pointing back at this node."
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "colorMode": {
+          "enum": [
+            "fill",
+            "stroke"
+          ],
+          "description": "default 'fill'"
+        },
+        "lineStyle": {
+          "enum": [
+            "solid",
+            "dashed",
+            "dotted",
+            "double",
+            "none"
+          ],
+          "description": "Shape outline; default 'solid'."
+        },
+        "rotation": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 360,
+          "description": "Degrees clockwise. Shape, text and image nodes only."
+        },
+        "notes": {
+          "type": "string"
+        },
+        "layerId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Must name a layer of the SAME diagram. Absent = implicit base sheet."
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/inkPoint"
+          },
+          "description": "draw nodes only: ink points RELATIVE to the node's x/y."
+        },
+        "strokeWidth": {
+          "enum": [
+            "s",
+            "m",
+            "l"
+          ],
+          "description": "draw nodes only; default 'm'"
+        },
+        "src": {
+          "type": "string",
+          "pattern": "^data:image/",
+          "description": "image nodes only: inline data URI. Remote URLs are refused \u2014 they would report every viewer's IP back to whoever published the document."
+        },
+        "lockAspect": {
+          "type": "boolean",
+          "description": "image nodes only; absent = true"
+        }
+      },
+      "dependentRequired": {
+        "x": [
+          "y"
+        ],
+        "y": [
+          "x"
+        ]
+      }
+    },
+    "edgeEndpoint": {
+      "type": "object",
+      "required": [
+        "nodeId"
+      ],
+      "properties": {
+        "nodeId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "A node in the SAME diagram as the edge. Edges never cross diagrams."
+        },
+        "anchorDeg": {
+          "type": "number",
+          "description": "Pins the endpoint to a fixed outline point: degrees clockwise from +X in the node's UNROTATED frame (0 right, 90 bottom, 180 left, 270 top). Omit for a floating endpoint, which is recomputed toward the other end \u2014 that is the recommended default."
+        },
+        "handleId": {
+          "deprecated": true,
+          "type": "string",
+          "description": "Retired four-handle model. Still parsed from old documents, never rendered from. Do not write it."
+        }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "required": [
+        "id",
+        "from",
+        "to"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/$defs/typography"
+        }
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "from": {
+          "$ref": "#/$defs/edgeEndpoint"
+        },
+        "to": {
+          "$ref": "#/$defs/edgeEndpoint"
+        },
+        "label": {
+          "type": "string"
+        },
+        "arrowType": {
+          "enum": [
+            "directed",
+            "bidirectional",
+            "undirected"
+          ],
+          "description": "default 'directed'"
+        },
+        "edgeStyle": {
+          "enum": [
+            "straight",
+            "bezier"
+          ],
+          "description": "Per-edge override; absent follows the viewer's preference."
+        },
+        "lineStyle": {
+          "enum": [
+            "solid",
+            "dashed",
+            "dotted"
+          ],
+          "description": "default 'solid'. Narrower than a node's lineStyle \u2014 no 'double'/'none'."
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "arrowSize": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "px, default 20"
+        },
+        "waypoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/point"
+          }
+        },
+        "layerId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Must not be an EARLIER sheet than either endpoint's layer."
+        }
+      }
+    },
+    "diagram": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "nodes",
+        "edges"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Should equal this diagram's key in the `diagrams` map."
+        },
+        "title": {
+          "type": "string",
+          "description": "A subflow's title mirrors its owning node's label."
+        },
+        "parentNodeId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Present exactly on sub-diagrams: the id of the node that owns this diagram."
+        },
+        "nodes": {
+          "type": "array",
+          "maxItems": 20000,
+          "items": {
+            "$ref": "#/$defs/node"
+          }
+        },
+        "edges": {
+          "type": "array",
+          "maxItems": 20000,
+          "items": {
+            "$ref": "#/$defs/edge"
+          }
+        },
+        "layers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/layer"
+          },
+          "description": "Ordered transparency sheets, base-first, over an implicit base sheet (index -1). Absent = everything on the base."
+        }
+      }
+    }
+  }
+}
