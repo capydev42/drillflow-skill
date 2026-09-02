@@ -1,0 +1,612 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://drillflow.de/schema/drillflow-document.schema.json",
+  "title": "DrillFlow document",
+  "description": "A DrillFlow diagram document. Diagrams live in a flat map; hierarchy is expressed by node.childDiagramId / diagram.parentNodeId references, never by nesting the JSON. Prose reference: https://drillflow.de/en/format/",
+  "type": "object",
+  "required": [
+    "id",
+    "title",
+    "rootDiagramId",
+    "diagrams",
+    "createdAt",
+    "updatedAt"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "title": {
+      "type": "string"
+    },
+    "rootDiagramId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Key into `diagrams`. Every document has exactly one root diagram."
+    },
+    "diagrams": {
+      "type": "object",
+      "description": "Map of diagram id to diagram. Must contain the key named by rootDiagramId.",
+      "minProperties": 1,
+      "maxProperties": 5000,
+      "additionalProperties": {
+        "$ref": "#/$defs/diagram"
+      }
+    },
+    "createdAt": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "updatedAt": {
+      "$ref": "#/$defs/timestamp"
+    },
+    "style": {
+      "$ref": "#/$defs/documentStyle"
+    }
+  },
+  "$defs": {
+    "timestamp": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Unix epoch MILLISECONDS (not seconds)."
+    },
+    "color": {
+      "type": "string",
+      "description": "Any CSS colour. `url(...)` is refused: a colour lands in a `background` shorthand, so it is a way to make a shared document fetch a remote resource and report the viewer's IP back.",
+      "not": {
+        "pattern": "url\\s*\\("
+      }
+    },
+    "typography": {
+      "type": "object",
+      "properties": {
+        "fontSize": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "px, default 14"
+        },
+        "fontFamily": {
+          "enum": [
+            "sketch",
+            "sans",
+            "serif",
+            "mono"
+          ],
+          "description": "default 'sketch'"
+        },
+        "bold": {
+          "type": "boolean"
+        },
+        "italic": {
+          "type": "boolean"
+        },
+        "align": {
+          "enum": [
+            "left",
+            "center",
+            "right"
+          ],
+          "description": "default 'center'"
+        },
+        "labelColor": {
+          "$ref": "#/$defs/color",
+          "description": "The label's ink for the whole element. Without it a shape's label takes a readable ink from its fill (or the element colour in stroke mode) and an edge label follows the reader's theme. A labelRun's `color` wins over this."
+        }
+      }
+    },
+    "labelRun": {
+      "type": "object",
+      "description": "B42: a formatted stretch of the element's `label`. `start`/`end` are [start, end) offsets into that exact string, so every plain-text reader of `label` is unaffected. The array is a paint order — a later run wins per property. `align` is deliberately absent: alignment is a paragraph property of the whole element. A run that does not fit its label is cleaned up on load, and any label write that does not carry runs with it clears them.",
+      "required": [
+        "start",
+        "end"
+      ],
+      "additionalProperties": false,
+      "minProperties": 3,
+      "properties": {
+        "start": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "fontSize": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "fontFamily": {
+          "enum": [
+            "sketch",
+            "sans",
+            "serif",
+            "mono"
+          ]
+        },
+        "bold": {
+          "type": "boolean"
+        },
+        "italic": {
+          "type": "boolean"
+        },
+        "color": {
+          "$ref": "#/$defs/color",
+          "description": "Absolute ink for this stretch; unlike an element's colour it does not flip with the theme."
+        }
+      }
+    },
+    "point": {
+      "type": "object",
+      "required": [
+        "x",
+        "y"
+      ],
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        }
+      }
+    },
+    "inkPoint": {
+      "type": "object",
+      "required": [
+        "x",
+        "y"
+      ],
+      "properties": {
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "p": {
+          "type": "number",
+          "description": "Stylus pressure; present only when real pressure was reported."
+        }
+      }
+    },
+    "layer": {
+      "type": "object",
+      "required": [
+        "id",
+        "name",
+        "visible"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string"
+        },
+        "visible": {
+          "type": "boolean"
+        }
+      }
+    },
+    "node": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "label"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/$defs/typography"
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "draw"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "points"
+            ],
+            "properties": {
+              "points": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "image"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "src"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "enum": [
+                  "text",
+                  "pin"
+                ]
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "not": {
+              "required": [
+                "childDiagramId"
+              ]
+            },
+            "description": "text and pin nodes cannot own a subflow."
+          }
+        }
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique within its own diagram (not globally)."
+        },
+        "type": {
+          "enum": [
+            "rect",
+            "circle",
+            "diamond",
+            "text",
+            "pin",
+            "draw",
+            "image"
+          ]
+        },
+        "label": {
+          "type": "string",
+          "description": "May be empty. \\n is a line break."
+        },
+        "labelRuns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/labelRun"
+          },
+          "description": "Optional per-stretch formatting of `label` (B42)."
+        },
+        "x": {
+          "type": "number",
+          "description": "Top-left corner, flow units. Y grows downward. OPTIONAL: omit x and y on every node of a diagram and DrillFlow lays that diagram out itself, the same way it lays out an imported Mermaid flowchart. Within one diagram it is all or nothing — positioning only some nodes is refused by the loader, a rule JSON Schema cannot express."
+        },
+        "y": {
+          "type": "number",
+          "description": "See x. Omit both together, or give both on every node of the diagram."
+        },
+        "w": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Omitted = per-type default (rect 140x60, circle/diamond 100x100, text 140x40, pin 12x12, draw 40x40, image 200x150)."
+        },
+        "h": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "childDiagramId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Key into the document's `diagrams`. That diagram must carry `parentNodeId` pointing back at this node."
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "colorMode": {
+          "enum": [
+            "fill",
+            "stroke"
+          ],
+          "description": "default 'fill'"
+        },
+        "lineStyle": {
+          "enum": [
+            "solid",
+            "dashed",
+            "dotted",
+            "double",
+            "none"
+          ],
+          "description": "Shape outline; default 'solid'."
+        },
+        "rotation": {
+          "type": "number",
+          "minimum": 0,
+          "exclusiveMaximum": 360,
+          "description": "Degrees clockwise. Shape, text and image nodes only."
+        },
+        "notes": {
+          "type": "string"
+        },
+        "layerId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Must name a layer of the SAME diagram. Absent = implicit base sheet."
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/inkPoint"
+          },
+          "description": "draw nodes only: ink points RELATIVE to the node's x/y."
+        },
+        "strokeWidth": {
+          "enum": [
+            "s",
+            "m",
+            "l"
+          ],
+          "description": "draw nodes only; default 'm'"
+        },
+        "src": {
+          "type": "string",
+          "pattern": "^data:image/",
+          "description": "image nodes only: inline data URI. Remote URLs are refused — they would report every viewer's IP back to whoever published the document."
+        },
+        "lockAspect": {
+          "type": "boolean",
+          "description": "image nodes only; absent = true"
+        },
+        "portOf": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Boundary port: the id of an edge in the PARENT diagram that this node stands for, so an arrow inside a sub-diagram can dock to what crosses its boundary. Created by the editor, not written by hand. Its label is rendered from the peer node on the parent level, so a stored label is only a fallback. A reader that does not know the field sees an ordinary labelled node, which is why it is one."
+        }
+      },
+      "dependentRequired": {
+        "x": [
+          "y"
+        ],
+        "y": [
+          "x"
+        ]
+      }
+    },
+    "edgeEndpoint": {
+      "type": "object",
+      "required": [
+        "nodeId"
+      ],
+      "properties": {
+        "nodeId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "A node in the SAME diagram as the edge. Edges never cross diagrams."
+        },
+        "anchorDeg": {
+          "type": "number",
+          "description": "Pins the endpoint to a fixed outline point: degrees clockwise from +X in the node's UNROTATED frame (0 right, 90 bottom, 180 left, 270 top). Omit for a floating endpoint, which is recomputed toward the other end — that is the recommended default."
+        },
+        "anchorRel": {
+          "type": "object",
+          "description": "Pins the endpoint INSIDE the node, at fractions of its width/height in the node's UNROTATED frame (centre = 0.5/0.5). Wins over anchorDeg. Meant for pointing at something inside an `image` — the editor writes it nowhere else. A reader that does not know the field draws the arrow to the node's edge instead.",
+          "required": ["x", "y"],
+          "properties": {
+            "x": { "type": "number", "minimum": 0, "maximum": 1 },
+            "y": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        "handleId": {
+          "deprecated": true,
+          "type": "string",
+          "description": "Retired four-handle model. Still parsed from old documents, never rendered from. Do not write it."
+        }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "required": [
+        "id",
+        "from",
+        "to"
+      ],
+      "allOf": [
+        {
+          "$ref": "#/$defs/typography"
+        }
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "from": {
+          "$ref": "#/$defs/edgeEndpoint"
+        },
+        "to": {
+          "$ref": "#/$defs/edgeEndpoint"
+        },
+        "label": {
+          "type": "string"
+        },
+        "labelRuns": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/labelRun"
+          },
+          "description": "Optional per-stretch formatting of `label` (B42)."
+        },
+        "arrowType": {
+          "enum": [
+            "directed",
+            "bidirectional",
+            "undirected"
+          ],
+          "description": "default 'directed'"
+        },
+        "edgeStyle": {
+          "enum": [
+            "straight",
+            "bezier"
+          ],
+          "description": "Per-edge override; absent follows the viewer's preference."
+        },
+        "lineStyle": {
+          "enum": [
+            "solid",
+            "dashed",
+            "dotted"
+          ],
+          "description": "default 'solid'. Narrower than a node's lineStyle — no 'double'/'none'."
+        },
+        "color": {
+          "$ref": "#/$defs/color"
+        },
+        "arrowSize": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "px, default 20"
+        },
+        "waypoints": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/point"
+          }
+        },
+        "layerId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Must not be an EARLIER sheet than either endpoint's layer."
+        }
+      }
+    },
+    "diagram": {
+      "type": "object",
+      "required": [
+        "id",
+        "title",
+        "nodes",
+        "edges"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Should equal this diagram's key in the `diagrams` map."
+        },
+        "title": {
+          "type": "string",
+          "description": "A subflow's title mirrors its owning node's label."
+        },
+        "parentNodeId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Present exactly on sub-diagrams: the id of the node that owns this diagram."
+        },
+        "nodes": {
+          "type": "array",
+          "maxItems": 20000,
+          "items": {
+            "$ref": "#/$defs/node"
+          }
+        },
+        "edges": {
+          "type": "array",
+          "maxItems": 20000,
+          "items": {
+            "$ref": "#/$defs/edge"
+          }
+        },
+        "layers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/layer"
+          },
+          "description": "Ordered transparency sheets, base-first, over an implicit base sheet (index -1). Absent = everything on the base."
+        },
+        "showPorts": {
+          "type": "boolean",
+          "description": "Does this sub-diagram show the parent level's inputs and outputs as boundary ports (see node.portOf)? Three-state: absent follows the reader's own preference, true/false is a deliberate choice for this sub-diagram. Meaningless on the root, which has no level above it."
+        }
+      }
+    },
+    "documentStyle": {
+      "type": "object",
+      "description": "The style a document was SHARED with: a snapshot of the sharer's own defaults, so a reader sees what the author saw even when no element was styled by hand. Not written into working documents.",
+      "properties": {
+        "fontFamily": {
+          "enum": [
+            "sketch",
+            "sans",
+            "serif",
+            "mono"
+          ]
+        },
+        "fontSize": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "nodeColor": {
+          "$ref": "#/$defs/color"
+        },
+        "edgeColor": {
+          "$ref": "#/$defs/color"
+        },
+        "colorMode": {
+          "enum": [
+            "fill",
+            "stroke"
+          ]
+        },
+        "nodeLineStyle": {
+          "enum": [
+            "solid",
+            "dashed",
+            "dotted",
+            "double",
+            "none"
+          ]
+        },
+        "edgeLineStyle": {
+          "enum": [
+            "solid",
+            "dashed",
+            "dotted"
+          ]
+        },
+        "arrowType": {
+          "enum": [
+            "directed",
+            "bidirectional",
+            "undirected"
+          ]
+        },
+        "arrowSize": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "edgeStyle": {
+          "enum": [
+            "straight",
+            "bezier"
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "id": "doc-1",
+  "title": "Order handling",
+  "rootDiagramId": "root",
+  "createdAt": 1754006400000,
+  "updatedAt": 1754006400000,
+  "diagrams": {
+    "root": {
+      "id": "root",
+      "title": "Order handling",
+      "nodes": [
+        { "id": "n1", "type": "rect", "label": "Take order", "x": 0, "y": 0, "childDiagramId": "d2" },
+        { "id": "n2", "type": "diamond", "label": "In stock?", "x": 0, "y": 140 }
+      ],
+      "edges": [
+        { "id": "e1", "from": { "nodeId": "n1" }, "to": { "nodeId": "n2" }, "label": "then" }
+      ]
+    },
+    "d2": {
+      "id": "d2",
+      "title": "Take order",
+      "parentNodeId": "n1",
+      "nodes": [
+        { "id": "n3", "type": "rect", "label": "Check customer", "x": 0, "y": 0 }
+      ],
+      "edges": []
+    }
+  }
+}
