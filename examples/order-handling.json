@@ -1,0 +1,294 @@
+{
+  "id": "doc-order-handling",
+  "title": "Order handling",
+  "rootDiagramId": "root",
+  "diagrams": {
+    "root": {
+      "id": "root",
+      "title": "Order handling",
+      "nodes": [
+        {
+          "id": "n-take-order",
+          "type": "rect",
+          "label": "Take order",
+          "x": 60,
+          "y": 60,
+          "childDiagramId": "d-take-order",
+          "w": 140,
+          "h": 60
+        },
+        {
+          "id": "n-in-stock",
+          "type": "diamond",
+          "label": "In stock?",
+          "x": 80,
+          "y": 200,
+          "w": 100,
+          "h": 100
+        },
+        {
+          "id": "n-ship",
+          "type": "rect",
+          "label": "Ship",
+          "x": 60,
+          "y": 520,
+          "childDiagramId": "d-ship",
+          "w": 140,
+          "h": 60
+        },
+        {
+          "id": "n-backorder",
+          "type": "rect",
+          "label": "Backorder",
+          "x": 60,
+          "y": 380,
+          "w": 140,
+          "h": 60
+        }
+      ],
+      "edges": [
+        {
+          "id": "e-root-1",
+          "from": {
+            "nodeId": "n-take-order"
+          },
+          "to": {
+            "nodeId": "n-in-stock"
+          }
+        },
+        {
+          "id": "e-root-2",
+          "from": {
+            "nodeId": "n-in-stock"
+          },
+          "to": {
+            "nodeId": "n-ship"
+          },
+          "label": "yes"
+        },
+        {
+          "id": "e-root-3",
+          "from": {
+            "nodeId": "n-in-stock"
+          },
+          "to": {
+            "nodeId": "n-backorder"
+          },
+          "label": "no"
+        },
+        {
+          "id": "e-root-4",
+          "from": {
+            "nodeId": "n-backorder"
+          },
+          "to": {
+            "nodeId": "n-ship"
+          }
+        }
+      ]
+    },
+    "d-take-order": {
+      "id": "d-take-order",
+      "title": "Take order",
+      "parentNodeId": "n-take-order",
+      "nodes": [
+        {
+          "id": "n-check-customer",
+          "type": "rect",
+          "label": "Check customer",
+          "x": 154,
+          "y": 60,
+          "w": 140,
+          "h": 60
+        },
+        {
+          "id": "n-validate-items",
+          "type": "rect",
+          "label": "Validate items",
+          "x": 154,
+          "y": 200,
+          "w": 140,
+          "h": 60
+        },
+        {
+          "id": "n-payment-ok",
+          "type": "diamond",
+          "label": "Payment ok?",
+          "x": 174,
+          "y": 340,
+          "w": 100,
+          "h": 100
+        },
+        {
+          "id": "n-confirm-order",
+          "type": "rect",
+          "label": "Confirm order",
+          "x": 60,
+          "y": 520,
+          "w": 140,
+          "h": 60
+        },
+        {
+          "id": "n-reject",
+          "type": "rect",
+          "label": "Reject",
+          "x": 248,
+          "y": 520,
+          "w": 140,
+          "h": 60
+        }
+      ],
+      "edges": [
+        {
+          "id": "e-d-take-order-1",
+          "from": {
+            "nodeId": "n-check-customer"
+          },
+          "to": {
+            "nodeId": "n-validate-items"
+          }
+        },
+        {
+          "id": "e-d-take-order-2",
+          "from": {
+            "nodeId": "n-validate-items"
+          },
+          "to": {
+            "nodeId": "n-payment-ok"
+          }
+        },
+        {
+          "id": "e-d-take-order-3",
+          "from": {
+            "nodeId": "n-payment-ok"
+          },
+          "to": {
+            "nodeId": "n-confirm-order"
+          },
+          "label": "yes"
+        },
+        {
+          "id": "e-d-take-order-4",
+          "from": {
+            "nodeId": "n-payment-ok"
+          },
+          "to": {
+            "nodeId": "n-reject"
+          },
+          "label": "no"
+        }
+      ]
+    },
+    "d-ship": {
+      "id": "d-ship",
+      "title": "Ship",
+      "parentNodeId": "n-ship",
+      "nodes": [
+        {
+          "id": "n-pick",
+          "type": "rect",
+          "label": "Pick",
+          "x": 60,
+          "y": 60,
+          "w": 140,
+          "h": 60
+        },
+        {
+          "id": "n-pack",
+          "type": "rect",
+          "label": "Pack",
+          "x": 60,
+          "y": 200,
+          "childDiagramId": "d-pack",
+          "w": 140,
+          "h": 60
+        },
+        {
+          "id": "n-hand-to-carrier",
+          "type": "rect",
+          "label": "Hand to carrier",
+          "x": 60,
+          "y": 340,
+          "w": 140,
+          "h": 60
+        }
+      ],
+      "edges": [
+        {
+          "id": "e-d-ship-1",
+          "from": {
+            "nodeId": "n-pick"
+          },
+          "to": {
+            "nodeId": "n-pack"
+          }
+        },
+        {
+          "id": "e-d-ship-2",
+          "from": {
+            "nodeId": "n-pack"
+          },
+          "to": {
+            "nodeId": "n-hand-to-carrier"
+          }
+        }
+      ]
+    },
+    "d-pack": {
+      "id": "d-pack",
+      "title": "Pack",
+      "parentNodeId": "n-pack",
+      "nodes": [
+        {
+          "id": "n-choose-box",
+          "type": "rect",
+          "label": "Choose box",
+          "x": 60,
+          "y": 60,
+          "w": 140,
+          "h": 60
+        },
+        {
+          "id": "n-add-padding",
+          "type": "rect",
+          "label": "Add padding",
+          "x": 60,
+          "y": 200,
+          "w": 140,
+          "h": 60
+        },
+        {
+          "id": "n-seal-and-label",
+          "type": "rect",
+          "label": "Seal and label",
+          "x": 60,
+          "y": 340,
+          "w": 140,
+          "h": 60
+        }
+      ],
+      "edges": [
+        {
+          "id": "e-d-pack-1",
+          "from": {
+            "nodeId": "n-choose-box"
+          },
+          "to": {
+            "nodeId": "n-add-padding"
+          }
+        },
+        {
+          "id": "e-d-pack-2",
+          "from": {
+            "nodeId": "n-add-padding"
+          },
+          "to": {
+            "nodeId": "n-seal-and-label"
+          }
+        }
+      ]
+    }
+  },
+  "createdAt": 1754006400000,
+  "updatedAt": 1754006400000
+}
