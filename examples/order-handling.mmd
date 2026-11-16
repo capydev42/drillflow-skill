@@ -1,0 +1,25 @@
+%% Every subgraph becomes a DrillFlow subflow. Three levels deep on the
+%% longest path: root → Ship → Pack.
+%% Import at https://app.drillflow.de — menu → Import → Mermaid…
+flowchart TD
+  %% A decision needs an edge per outcome, and branches usually rejoin:
+  %% Backorder rejoins Ship rather than dead-ending.
+  A[Take order] --> B{In stock?}
+  B -->|yes| C[Ship]
+  B -->|no| D[Backorder]
+  D --> C
+
+  subgraph A[Take order]
+    A1[Check customer] --> A2[Validate items]
+    A2 --> A3{Payment ok?}
+    A3 -->|yes| A4[Confirm order]
+    A3 -->|no| A5[Reject]
+  end
+
+  subgraph C[Ship]
+    C1[Pick] --> C2[Pack] --> C3[Hand to carrier]
+
+    subgraph C2[Pack]
+      P1[Choose box] --> P2[Add padding] --> P3[Seal and label]
+    end
+  end
